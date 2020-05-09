@@ -74,5 +74,6 @@
         "vector": "cpp",
         "list": "cpp",
         "set": "cpp"
-    }
+    },
+    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools"
 }

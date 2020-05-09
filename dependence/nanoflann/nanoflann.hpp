@@ -1,3 +1,4 @@
+#pragma once
 /***********************************************************************
  * Software License Agreement (BSD License)
  *
@@ -43,9 +44,6 @@
  *   - <a href="http://jlblancoc.github.io/nanoflann/" >Doxygen
  * documentation</a>
  */
-
-#ifndef NANOFLANN_HPP_
-#define NANOFLANN_HPP_
 
 #include <algorithm>
 #include <array>
@@ -2045,5 +2043,3 @@ public:
 
 /** @} */ // end of grouping
 } // namespace nanoflann
-
-#endif /* NANOFLANN_HPP_ */

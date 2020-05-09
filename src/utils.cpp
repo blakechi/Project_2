@@ -168,107 +168,19 @@ void generateSphereTestData(unsigned int lateral, int*& data)
 }
 
 
-void sampleDataRandom(const int* data, unsigned int dataCount, float ratio, ScatterPoint<int>*& sampledData)
-{
-    // std::cout << "[sampleDataRandom]\n";
-    int numSample = static_cast<int>(dataCount*ratio);
-
-    std::vector<int> sampleIndices;
-    sampleIndices.reserve(dataCount);
-
-    for(int i = 0; i < dataCount; i++)
-    {
-        sampleIndices.emplace_back(i);
-    }
-
-    std::shuffle(sampleIndices.begin(), sampleIndices.end(), std::default_random_engine(0));
-
-    // std::cout << "[scatterData] (Before)\n";
-    ScatterPoint<int>* scatterData = new ScatterPoint<int>[numSample];
-    for(int i = 0; i < numSample; i++)
-    {
-        scatterData[i] = { sampleIndices[i], data[sampleIndices[i]] };
-    }
-    sampledData = scatterData;
-    // std::cout << "[scatterData] (After)\n";
-}
-
-const Vector3 convertIdx1DTo3D(int idx, const int* dimension)
+const Point convertIdx1DTo3D(int idx, const int* dimension)
 {
     // std::cout << "[convertIdx1DTo3D]\n";
-    return Vector3(
+    return Point(
         (idx % (dimension[0]*dimension[1])) % dimension[0],
         (idx % (dimension[0]*dimension[1]))/dimension[0],
         idx/(dimension[0]*dimension[1])
     );
 }
 
-void generatePointCloud(PointCloud<float> &point, const DataSource<ScatterPoint<int>>& data)
+int convertIdx3DTo1D(const Point& p, const int* dimension)
 {
-    // std::cout << "[generatePointCloud]\n";
-	point.pts.resize(data.count);
-
-	for(unsigned int i = 0; i < data.count; i++)
-	{
-        Vector3 idx = convertIdx1DTo3D(data.data[i].index, data.dimension);
-
-        point.pts[i].x = idx.x();
-        point.pts[i].y = idx.y();
-        point.pts[i].z = idx.z();
-	}
-    std::cout << std::endl;
-}
-
-
-void interpolateData(const DataSource<ScatterPoint<int>>& data, const Point& target, const int numNeighbors)
-{
-    // std::cout << "[interpolateData]\n";
-    PointCloud<float> cloud;
-    generatePointCloud(cloud, data);
-
-    // construct a kd-tree index:
-    // std::cout << "[kd-tree]\n";
-	typedef nanoflann::KDTreeSingleIndexAdaptor<
-		nanoflann::L2_Simple_Adaptor<float, PointCloud<float>>,
-		PointCloud<float>,
-		3 /* dim */
-		> kd_tree;
-
-    kd_tree index(3, cloud, nanoflann::KDTreeSingleIndexAdaptorParams(10 /* max leaf */));
-	index.buildIndex();
-
-
-    float queryPt[3] = { 
-        target.x(), 
-        target.y(), 
-        target.z() 
-    };
-
-    size_t numResults = numNeighbors;
-    std::vector<size_t> nearestNeighbors(numResults);
-    std::vector<float> neighborsDistance(numResults);
-
-    // std::cout << "[knnSearch]\n";
-    numResults = index.knnSearch(&queryPt[0], numResults, &nearestNeighbors[0], &neighborsDistance[0]);
-
-
-    nearestNeighbors.resize(numResults);
-    neighborsDistance.resize(numResults);
-    
-    // TODO: interpolation
-    for(size_t neighbor : nearestNeighbors)
-    {
-        std::cout << "(" << neighbor << ", ";
-        std::cout << data.data[neighbor].index << ", ";
-        std::cout << data.data[neighbor].funcValue << ") ";
-    }
-    std::cout << std::endl;
-
-    for(size_t d : neighborsDistance)
-    {
-        std::cout << d << " ";
-    }
-    std::cout << std::endl;
+    return p.x() + p.y()*dimension[0] + p.z()*dimension[0]*dimension[1];
 }
 
 

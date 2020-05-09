@@ -1,7 +1,10 @@
 #pragma once
 
 
+#include "utils.hpp"
 #include "Vector3.hpp"
+#include "DataSource.hpp"
+#include "ScatterPoint.hpp"
 
 
 namespace Interpolation
@@ -140,6 +143,115 @@ float triCubic3D(const T* funcValue, const Point& p)
         + x*(1 - y)*z*funcValue[5]
         + x*y*(1 - z)*funcValue[6]
         + x*y*z*funcValue[7];
+}
+
+
+// Shepard
+//
+//
+template<typename Tree>
+ScatterPoint<float> localShepard2(const Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors)
+{
+    // std::cout << "[interpolateData]\n";
+    int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
+    float queryPt[3] = { 
+        target.x(), 
+        target.y(), 
+        target.z() 
+    };
+
+    size_t numResults = 1;
+    std::vector<size_t> kNearestNeighbors(numResults);
+    std::vector<float> neighborsDistance(numResults);
+
+    // std::cout << "[knnSearch]\n";
+    numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+
+    if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
+    {
+        return {originalIdx, sampleData.data[kNearestNeighbors[0]].funcValue};
+    }
+    else
+    {
+        numResults = numNeighbors;
+        kNearestNeighbors.resize(numResults);
+        neighborsDistance.resize(numResults);
+
+        // std::cout << "[knnSearch]\n";
+        numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+        kNearestNeighbors.resize(numResults);
+        neighborsDistance.resize(numResults);
+        
+
+        // TODO: interpolation
+        for(size_t neighbor : kNearestNeighbors)
+        {
+            std::cout << neighbor << " ";
+        }
+        std::cout << std::endl;
+
+        for(float distance : neighborsDistance)
+        {
+            std::cout << distance << " ";
+        }
+        std::cout << std::endl;
+
+        float numerator = 0;
+        float denominator = 0;
+        for(int i = 0; i < numResults; i++)
+        {
+            float distanceInv = 1/neighborsDistance[i];
+            numerator += (sampleData.data[kNearestNeighbors[i]].funcValue)*distanceInv;
+            denominator += distanceInv;
+        }
+
+        return { 
+            originalIdx,
+            numerator/denominator
+        };
+    }
+}
+
+
+template<typename Tree>
+ScatterPoint<float> globalShepard2(const Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors)
+{
+    // std::cout << "[interpolateData]\n";
+    int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
+    float queryPt[3] = { 
+        target.x(), 
+        target.y(), 
+        target.z() 
+    };
+
+    size_t numResults = 1;
+    std::vector<size_t> kNearestNeighbors(numResults);
+    std::vector<float> neighborsDistance(numResults);
+
+    // std::cout << "[knnSearch]\n";
+    numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+
+    if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
+    {
+        return {originalIdx, sampleData.data[kNearestNeighbors[0]].funcValue};
+    }
+    else
+    {
+        float numerator = 0;
+        float denominator = 0;
+        for(int i = 0; i < sampleData.count; i++)
+        {
+            Point dataPoint = utils::convertIdx1DTo3D(sampleData.data[i].index, sampleData.dimension);
+            float distanceInv = 1/(target - dataPoint).magnitude();
+            numerator += (sampleData.data[i].funcValue)*distanceInv;
+            denominator += distanceInv;
+        }
+
+        return { 
+            originalIdx,
+            numerator/denominator
+        };
+    }
 }
 
 
