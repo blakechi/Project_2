@@ -1,6 +1,8 @@
 #pragma once
 
 
+#include "Eigen/Dense"
+
 #include "utils.hpp"
 #include "Vector3.hpp"
 #include "DataSource.hpp"
@@ -214,7 +216,7 @@ ScatterPoint<float> localShepard2(const Tree* kDTree, const DataSource<ScatterPo
 
 
 template<typename Tree>
-ScatterPoint<float> globalShepard2(const Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors)
+ScatterPoint<float> globalShepard2(const Tree* kdTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors)
 {
     // std::cout << "[interpolateData]\n";
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
@@ -229,7 +231,7 @@ ScatterPoint<float> globalShepard2(const Tree* kDTree, const DataSource<ScatterP
     std::vector<float> neighborsDistance(numResults);
 
     // std::cout << "[knnSearch]\n";
-    numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+    numResults = kdTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
 
     if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
     {
@@ -252,6 +254,196 @@ ScatterPoint<float> globalShepard2(const Tree* kDTree, const DataSource<ScatterP
             numerator/denominator
         };
     }
+}
+
+
+// Hardy
+//
+//
+template<typename Tree>
+ScatterPoint<float> localHardy(Tree* kdTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors, const bool INVERSE)
+{
+    // std::cout << "[interpolateData]\n";
+    int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
+    float queryPt[3] = { 
+        target.x(), 
+        target.y(), 
+        target.z() 
+    };
+
+    size_t numResults = 1;
+    std::vector<size_t> kNearestNeighbors(numResults);
+    std::vector<float> neighborsDistance(numResults);
+
+    // std::cout << "[knnSearch]\n";
+    numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+
+    if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
+    {
+        return {originalIdx, sampleData.data[kNearestNeighbors[0]].funcValue};
+    }
+    else
+    {
+        int R = 10;
+        Eigen::MatrixXd M;
+        Eigen::MatrixXd C;
+        Eigen::MatrixXd F;
+
+        M.resize(numNeighbors, numNeighbors);
+        C.resize(numNeighbors);
+        F.resize(numNeighbors);
+        
+        numResults = numNeighbors;
+        kNearestNeighbors.resize(numResults);
+        neighborsDistance.resize(numResults);
+
+        // std::cout << "[knnSearch]\n";
+        numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+        kNearestNeighbors.resize(numResults);
+        neighborsDistance.resize(numResults);
+        
+        float distance;
+        for(int i = 0; i < numResults; i++)
+        {
+            F(i) = sampleData.data[i].funcValue;
+
+            Point rowNeighbor = utils::convertIdx1DTo3D(
+                sampleData.data[kNearestNeighbors(i)].index,
+                sampleData.dimension
+            );
+
+            for(int j = 0; j < numResults; j++)
+            {
+                distance = (rowNeighbor - utils::convertIdx1DTo3D(
+                    sampleData.data[kNearestNeighbors(j)].index,
+                    sampleData.dimension
+                )).magnitude();
+
+                M(i, j) = std::sqrtf(R*R + distance);
+
+                if(INVERSE)
+                {
+                    M(i, j) = 1/M(i, j);
+                }
+            }
+        }
+
+
+        C = M.householderQr().solve(F);
+
+
+        float interpolatedValue = 0;
+        for(int i = 0; i < numResults; i++)
+        {
+            distance = (target - utils::convertIdx1DTo3D(
+                sampleData.data[kNearestNeighbors(i)].index,
+                sampleData.dimension
+            )).magnitude();
+
+            if(INVERSE)
+            {
+                interpolatedValue += C(i)/std::sqrtf(R*R + distance);
+            }
+            else
+            {
+                interpolatedValue += C(i)*std::sqrtf(R*R + distance);
+            }
+        }
+
+        return { 
+            originalIdx,
+            interpolatedValue
+        };
+    }
+}
+
+
+template<typename Tree>
+ScatterPoint<float> globalHardy(Tree* kdTree, const Eigen::MatrixXd& C, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE)
+{
+    // std::cout << "[interpolateData]\n";
+    int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
+    float queryPt[3] = { 
+        target.x(), 
+        target.y(), 
+        target.z() 
+    };
+
+    size_t numResults = 1;
+    std::vector<size_t> kNearestNeighbors(numResults);
+    std::vector<float> neighborsDistance(numResults);
+
+    // std::cout << "[knnSearch]\n";
+    numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+
+    if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
+    {
+        return {originalIdx, sampleData.data[kNearestNeighbors[0]].funcValue};
+    }
+    else
+    {
+        int R = 10;
+        float distance;
+        float interpolatedValue = 0;
+        for(int i = 0; i < sampleData.count; i++)
+        {
+            distance = (target - utils::convertIdx1DTo3D(
+                sampleData.data[i].index,
+                sampleData.dimension
+            )).magnitude();
+
+            if(INVERSE)
+            {
+                interpolatedValue += C(i)/std::sqrtf(R*R + distance);
+            }
+            else
+            {
+                interpolatedValue += C(i)*std::sqrtf(R*R + distance);
+            }
+        }
+
+        return { 
+            originalIdx,
+            interpolatedValue
+        };
+    }
+}
+
+
+const Eigen::MatrixXd precomputeGlobalC(const DataSource<ScatterPoint<float>>& sampleData, const float R)
+{
+    Eigen::MatrixXd M;
+    Eigen::MatrixXd C;
+    Eigen::MatrixXd F;
+
+    M.resize(sampleData.count, sampleData.count);
+    C.resize(sampleData.count);
+    F.resize(sampleData.count);
+
+    float distance;
+    for(int i = 0; i < sampleData.count; i++)
+    {
+        F(i) = sampleData.data[i].funcValue;
+
+        Point rowNeighbor = utils::convertIdx1DTo3D(
+            sampleData.data[i].index,
+            sampleData.dimension
+        );
+
+        for(int j = 0; j < sampleData.count; j++)
+        {
+            distance = (rowNeighbor - utils::convertIdx1DTo3D(
+                sampleData.data[j].index,
+                sampleData.dimension
+            )).magnitude();
+
+            M(i, j) = std::sqrtf(R*R + distance);
+        }
+    }
+
+    C = M.householderQr().solve(F);
+
+    return C;
 }
 
 

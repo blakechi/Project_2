@@ -3,6 +3,7 @@
 
 #include "nanoflann/nanoflann.hpp"
 #include "nanoflann/util.h"
+#include "Eigen/Dense"
 
 #include "utils.hpp"
 #include "Interpolation.hpp"
@@ -10,7 +11,6 @@
 #include "ScatterPoint.hpp"
 #include "DataSource.hpp"
 
-#include "Eigen/Dense"
 
 typedef nanoflann::KDTreeSingleIndexAdaptor
         <
@@ -60,13 +60,7 @@ int main(int argc, char* argv[])
         {
             for(int x = 0; x < imageDimension.x; x++)
             {
-                int gray = 0;
-                for(int z = 0; z < data.dimension[2]; z++)
-                {
-                    gray += data.data[x + y*data.dimension[0] + z*data.dimension[0]*data.dimension[1]];
-                }
-                gray /= (data.dimension[2]);
-                image[x + y*imageDimension.x] = Color(gray, gray, gray);
+                
             }
         }
     }
