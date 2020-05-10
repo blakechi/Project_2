@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 
     std::string outputName = "image.ppm";
     std::string dataPath = argv[1];
-    DataSource data = utils::loadRawData(dataPath.c_str());
+    DataSource<float> data = utils::loadRawData(dataPath.c_str());
 
     float sampleRate = static_cast<float>(utils::getInt(argv[2]))/100;
     ScatterPoint<DataType>* sampleData;
@@ -74,39 +74,60 @@ int main(int argc, char* argv[])
     delete[] scatterData.dimension;
 
 
-    DataSource<ScatterPoint<DataType>> data_;
-    int count = 27 - 1;
-    ScatterPoint<DataType>* d = new ScatterPoint<DataType>[count];
+    int lateral = 32;
+    DataSource<float> data_;
 
-    float tmp;
-    for(int j = 0; j < count; j++)
-    {
-        if(j == 13)
-        {
-            continue;
-        }
-        else
-        {
-            tmp = static_cast<DataType>(j);
-            d[j] = { j, tmp };
-        }
-    }
-    data_.data = d;
-    data_.count = count;
+    utils::generateSphereTestData(lateral, data_.data);
+    data_.count = lateral*lateral*lateral;
     data_.dimension = new int[3];
-    data_.dimension[0] = 3;
-    data_.dimension[1] = 3;
-    data_.dimension[2] = 3;
+    data_.dimension[0] = lateral;
+    data_.dimension[1] = lateral;
+    data_.dimension[2] = lateral;
 
-    KDTree* kdTree_ = utils::buildKDTree<KDTree, DataType>(data_);
-    Interpolation::localShepard2<KDTree>(kdTree_, data_, Vector3(1, 1, 1), 6);
+    ScatterPoint<DataType>* sampleData_;
+    utils::sampleDataRandom<DataType>(data_.data, data_.count, sampleRate, sampleData_);
 
-    for(int j = 0; j < count; j++)
+    DataSource<ScatterPoint<DataType>> data__;
+    data__.count = static_cast<int>(data_.count*sampleRate);
+    data__.dimension = data_.dimension;
+    data__.data = sampleData_;
+
+    KDTree* kdTree_ = utils::buildKDTree<KDTree, DataType>(data__);
+
+
+    Image* image_ = new Color[imageDimension.x*imageDimension.y];
+    for(int i = 0; i < imageDimension.x*imageDimension.y; i++)
     {
-        std::cout << data_.data[j].funcValue << " ";
+        image_[i] = Color(0);
     }
-    std::cout << std::endl;
 
-    delete[] data_.data;
-    delete[] data_.dimension;
+    // random sampled
+    for(int idx = 0; idx < data__.count; idx++)
+    {
+        Point p = utils::convertIdx1DTo3D(data__.data[idx].index, data__.dimension);
+        if(p.z() == 16)
+        {
+            image_[static_cast<int>(p.x() + p.y()*data__.dimension[0])] = Color(data__.data[idx].funcValue).convert255();
+        }
+    }
+
+    std::string imageName = "sampled.ppm";
+    utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);
+
+    // interpolated
+    for(int y = imageDimension.y - 1; y >= 0; y--)
+    {
+        for(int x = 0; x < imageDimension.x; x++)
+        {
+            // ScatterPoint<DataType> result = Interpolation::globalShepard2<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6);
+            ScatterPoint<DataType> result = Interpolation::localHardy<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6, false);
+            image_[x + y*imageDimension.x] = Color(result.funcValue).clamp().gammaCorrection(4).convert255();
+        }
+    }
+
+    imageName = "interpolated.ppm";
+    utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);
+
+    delete[] data__.data;
+    delete[] data__.dimension;
 }

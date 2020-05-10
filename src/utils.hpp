@@ -23,19 +23,19 @@ namespace utils
 
 
 int getInt(const char* argv);
-DataSource<int> loadRawData(const char* volumePath);
+DataSource<float> loadRawData(const char* volumePath);
 void generateImage(std::string &filename, Image* image, int width, int height);
-std::tuple<int, int> getBoundaryOfDataVavlue(int*& data, int dataCount);
+std::tuple<int, int> getBoundaryOfDataVavlue(float*& data, int dataCount);
 std::tuple<Vector2<int>, Vector2<float>> convertImgIdxToVoxelIdx(int x, int y, const Vector2<float>& voxelImgRatio);
 unsigned int calculateIdx(int x, int y, int z, int lateral);
 bool isInsideSphere(const Point& center, float radius, const Point& p);
-void generateSphereTestData(unsigned int lateral, int*& data);
+void generateSphereTestData(unsigned int lateral, float*& data);
 const Point convertIdx1DTo3D(int idx, const int* dimension);
 int convertIdx3DTo1D(const Point& p, const int* dimension);
 
 
 template<typename DataType>
-void sampleDataRandom(const int* data, unsigned int dataCount, float ratio, ScatterPoint<DataType>*& sampledData)
+void sampleDataRandom(const DataType* data, unsigned int dataCount, float ratio, ScatterPoint<DataType>*& sampledData)
 {
     // std::cout << "[sampleDataRandom]\n";
     int numSample = static_cast<int>(dataCount*ratio);

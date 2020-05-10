@@ -62,7 +62,7 @@ void generateImage(std::string &fileName, Image* image, int width, int height)
 }
 
 
-std::tuple<int, int> getBoundaryOfDataVavlue(int*& data, int dataCount)
+std::tuple<int, int> getBoundaryOfDataVavlue(float*& data, int dataCount)
 {
     int maxValue = 0;
     int minValue = 0;
@@ -85,7 +85,7 @@ std::tuple<int, int> getBoundaryOfDataVavlue(int*& data, int dataCount)
 }
 
 
-DataSource<int> loadRawData(const char* volumePath)
+DataSource<float> loadRawData(const char* volumePath)
 {
     std::cout << "[Load] Reading data...\n";
 
@@ -95,10 +95,10 @@ DataSource<int> loadRawData(const char* volumePath)
     ReadVolume(volumePath, data_type, data_count, data_dim[0], data_dim[1], data_dim[2], data_ptr_void);
     char* data_ptr_char = (char*)data_ptr_void;
 
-    int* data_ptr = new int[data_count];
+    float* data_ptr = new float[data_count];
     for(int i = 0; i < data_count; i++)
     {
-        data_ptr[i] = static_cast<int>(data_ptr_char[i]) + 128;
+        data_ptr[i] = static_cast<float>(data_ptr_char[i]) + 128;
     }
     delete[] data_ptr_char;
 
@@ -129,12 +129,12 @@ bool isInsideSphere(const Point& center, float radius, const Point& p)
 }
 
 
-void generateSphereTestData(unsigned int lateral, int*& data)
+void generateSphereTestData(unsigned int lateral, float*& data)
 {
-    Point center(32, 32, 32);
-    float radius = 20.0f;
+    Point center(lateral/2, lateral/2, lateral/2);
+    float radius = 0.6*lateral;
 
-    int* data_ = new int[lateral*lateral*lateral];
+    float* data_ = new float[lateral*lateral*lateral];
 
     for(int k  = 0; k < lateral; k++)
     {
@@ -146,11 +146,11 @@ void generateSphereTestData(unsigned int lateral, int*& data)
 
                 if(isInsideSphere(center, radius, {i, j, k})) 
                 { 
-                    data_[idx] = 127; 
+                    data_[idx] = 1 - ((center - Point(i, j, k)).magnitude()/radius); 
                 }
                 else
                 {
-                    data_[idx] = -128; 
+                    data_[idx] = 0; 
                 }
             }
         }
