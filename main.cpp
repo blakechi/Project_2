@@ -10,6 +10,7 @@
 #include "ScatterPoint.hpp"
 #include "DataSource.hpp"
 
+#include "Eigen/Dense"
 
 typedef nanoflann::KDTreeSingleIndexAdaptor
         <
