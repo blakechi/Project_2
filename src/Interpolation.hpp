@@ -325,7 +325,7 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
                         utils::convertIdx1DTo3D(
                             sampleData.data[kNearestNeighbors[j]].index,
                             sampleData.dimension
-                        )/32
+                        )/32    // normalize
                     ).squareMagnitude();
 
                     M(i, j) = std::sqrt(R*R + distance);
@@ -346,6 +346,7 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
         for(int i = 0; i < numResults; i++)
         {
             distance = (
+                // normalize
                 target/32 - 
                 utils::convertIdx1DTo3D(
                     sampleData.data[kNearestNeighbors[i]].index,
@@ -457,6 +458,7 @@ ScatterPoint<float> approximateGlobalHardy(Tree* kDTree, const DataSource<Scatte
         for(int i = 0; i < numResults; i++)
         {
             distance = (
+                // normalize
                 target/32 - 
                 utils::convertIdx1DTo3D(
                     sampleData.data[kNearestNeighbors[i]].index,
@@ -512,6 +514,7 @@ ScatterPoint<float> globalHardy(Tree* kDTree, const Eigen::VectorXd& C, const Da
         for(int i = 0; i < sampleData.count; i++)
         {
             distance = (
+                // normalize
                 target/32 - 
                 utils::convertIdx1DTo3D(
                     sampleData.data[i].index,
@@ -560,6 +563,7 @@ const Eigen::MatrixXd precomputeGlobalC(const DataSource<ScatterPoint<float>>& s
         for(int j = 0; j < sampleData.count; j++)
         {
             distance = (
+                // normalize
                 rowNeighbor/32 -
                 utils::convertIdx1DTo3D(
                     sampleData.data[j].index,
