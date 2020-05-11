@@ -269,7 +269,7 @@ static double magma[256][3] = {
 };
 
 
-const Color mapColorFrom(const float& gray, const Point2<int>& minMaxValue)
+const Color mapColorFrom(const float& gray, const Point2<float>& minMaxValue)
 {
     int idx = static_cast<int>(255.99*(gray - minMaxValue.min)/(minMaxValue.max - minMaxValue.min));
     return Color(magma[idx][0], magma[idx][1], magma[idx][2]);

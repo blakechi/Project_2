@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     data_.dimension[2] = lateral;
 
     ScatterPoint<DataType>* sampleData_;
-    Point2<int> minMaxValue = utils::sampleDataRandom<DataType>(data_.data, data_.count, sampleRate, sampleData_);
+    Point2<DataType> minMaxValue = utils::sampleDataRandom<DataType>(data_.data, data_.count, sampleRate, sampleData_);
 
     DataSource<ScatterPoint<DataType>> data__;
     data__.count = static_cast<int>(data_.count*sampleRate);
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
 
     Image* image_ = new Color[imageDimension.x*imageDimension.y];
     Color colorDummy(0);
-    Eigen::VectorXd CHardy = Interpolation::precomputeGlobalC(data__, 0.001);
+    // Eigen::VectorXd CHardy = Interpolation::precomputeGlobalC(data__, 0.001);
 
     // original
     for(int y = imageDimension.y - 1; y >= 0; y--)
@@ -133,19 +133,40 @@ int main(int argc, char* argv[])
     utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);
 
     // interpolated
+    minMaxValue.max = 0.0f;
+    minMaxValue.min = 0.0f;
+    float tmp = 0.0f;
     for(int y = imageDimension.y - 1; y >= 0; y--)
     {
         for(int x = 0; x < imageDimension.x; x++)
         {
             // ScatterPoint<DataType> result = Interpolation::localShepard2<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6);
             // ScatterPoint<DataType> result = Interpolation::globalShepard2<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6);
-            // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6, false);
-            ScatterPoint<DataType> result = Interpolation::globalHardy<KDTree>(kdTree_, CHardy, data__, Vector3(x, y, 32), false);
+            // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree>(kdTree_, data__, Vector3(x, y, 32), false, 6);
+            ScatterPoint<DataType> result = Interpolation::approximateGlobalHardy<KDTree>(kdTree_, data__, Vector3(x, y, 32), false);
+            // ScatterPoint<DataType> result = Interpolation::globalHardy<KDTree>(kdTree_, CHardy, data__, Vector3(x, y, 32), false);
+            image_[x + y*imageDimension.x] = Color(result.funcValue).clamp();
 
-            colorDummy = ColorMap::mapColorFrom(result.funcValue, minMaxValue);
-            image_[x + y*imageDimension.x] = colorDummy.clamp().gammaCorrection(6).convert255();
+            tmp = result.funcValue;
+            if(minMaxValue.max < tmp)
+            {
+                minMaxValue.max = tmp;
+            }
+            if(minMaxValue.min > tmp)
+            {
+                minMaxValue.min = tmp;
+            }
         }
     }
+
+    for(int y = imageDimension.y - 1; y >= 0; y--)
+    {
+        for(int x = 0; x < imageDimension.x; x++)
+        {
+            colorDummy = ColorMap::mapColorFrom(image_[x + y*imageDimension.x].r(), minMaxValue);
+            image_[x + y*imageDimension.x] = colorDummy.clamp().convert255();        
+        }
+    }       
 
     imageName = "interpolated.ppm";
     utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);

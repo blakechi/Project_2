@@ -261,7 +261,118 @@ ScatterPoint<float> globalShepard2(const Tree* kDTree, const DataSource<ScatterP
 //
 //
 template<typename Tree>
-ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors, const bool INVERSE)
+ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE, const int numNeighbors)
+{
+    // std::cout << "[interpolateData]\n";
+    int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
+    float queryPt[3] = { 
+        target.x(), 
+        target.y(),
+        target.z() 
+    };
+
+    size_t numResults = 1;
+    std::vector<size_t> kNearestNeighbors(numResults);
+    std::vector<float> neighborsDistance(numResults);
+
+    // std::cout << "[knnSearch]\n";
+    numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+
+    if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
+    {
+        return {originalIdx, sampleData.data[kNearestNeighbors[0]].funcValue};
+    }
+    else
+    {
+        float R = 0.001;
+        Eigen::MatrixXd M;
+        Eigen::VectorXd C;
+        Eigen::VectorXd F;
+
+        M.resize(numNeighbors, numNeighbors);
+        C.resize(numNeighbors);
+        F.resize(numNeighbors);
+        
+        numResults = numNeighbors;
+        kNearestNeighbors.resize(numResults);
+        neighborsDistance.resize(numResults);
+
+        // std::cout << "[knnSearch]\n";
+        numResults = kDTree->knnSearch(&queryPt[0], numResults, &kNearestNeighbors[0], &neighborsDistance[0]);
+        kNearestNeighbors.resize(numResults);
+        neighborsDistance.resize(numResults);
+        
+        float distance;
+        for(int i = 0; i < numResults; i++)
+        {
+            F(i) = sampleData.data[kNearestNeighbors[i]].funcValue;
+
+            Point rowNeighbor = utils::convertIdx1DTo3D(
+                sampleData.data[kNearestNeighbors[i]].index,
+                sampleData.dimension
+            )/32;
+
+            for(int j = 0; j < numResults; j++)
+            {
+                if(i == j)
+                {
+                    M(i, j) = R;
+                }
+                else
+                {
+                    distance = (
+                        rowNeighbor - 
+                        utils::convertIdx1DTo3D(
+                            sampleData.data[kNearestNeighbors[j]].index,
+                            sampleData.dimension
+                        )/32
+                    ).squareMagnitude();
+
+                    M(i, j) = std::sqrt(R*R + distance);
+                }
+
+                if(INVERSE)
+                {
+                    M(i, j) = 1/M(i, j);
+                }
+            }
+        }
+
+        Eigen::MatrixXd pseudoInv = (M.transpose()*M).completeOrthogonalDecomposition().pseudoInverse();
+        C = pseudoInv*M.transpose()*F;
+
+
+        float interpolatedValue = 0;
+        for(int i = 0; i < numResults; i++)
+        {
+            distance = (
+                target/32 - 
+                utils::convertIdx1DTo3D(
+                    sampleData.data[kNearestNeighbors[i]].index,
+                    sampleData.dimension
+                )/32
+            ).squareMagnitude();
+
+            if(INVERSE)
+            {
+                interpolatedValue += C(i)/std::sqrt(R*R + distance);
+            }
+            else
+            {
+                interpolatedValue += C(i)*std::sqrt(R*R + distance);
+            }
+        }
+
+        return { 
+            originalIdx,
+            interpolatedValue
+        };
+    }
+}
+
+
+template<typename Tree>
+ScatterPoint<float> approximateGlobalHardy(Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE, const int numNeighbors = 1000)
 {
     // std::cout << "[interpolateData]\n";
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
@@ -374,7 +485,7 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
 template<typename Tree>
 ScatterPoint<float> globalHardy(Tree* kDTree, const Eigen::VectorXd& C, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE)
 {
-    // std::cout << "[interpolateData]\n";
+    // use precomputeGlobalC first to get C as the second argument
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
     float queryPt[3] = { 
         target.x(), 
