@@ -178,6 +178,7 @@ const Point convertIdx1DTo3D(int idx, const int* dimension)
     );
 }
 
+
 int convertIdx3DTo1D(const Point& p, const int* dimension)
 {
     return p.x() + p.y()*dimension[0] + p.z()*dimension[0]*dimension[1];

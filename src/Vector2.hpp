@@ -3,5 +3,19 @@
 template<typename T>
 struct Vector2
 {
-    T x, y;
+    union
+    {
+        struct 
+        {
+            T x, y;
+        };
+        
+        struct
+        {
+            T min, max;
+        };
+    };
 };
+
+template<typename T>
+using Point2 = Vector2<T>;

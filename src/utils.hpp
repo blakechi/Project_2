@@ -35,7 +35,7 @@ int convertIdx3DTo1D(const Point& p, const int* dimension);
 
 
 template<typename DataType>
-void sampleDataRandom(const DataType* data, unsigned int dataCount, float ratio, ScatterPoint<DataType>*& sampledData)
+Point2<int> sampleDataRandom(const DataType* data, unsigned int dataCount, float ratio, ScatterPoint<DataType>*& sampledData)
 {
     // std::cout << "[sampleDataRandom]\n";
     int numSample = static_cast<int>(dataCount*ratio);
@@ -58,6 +58,25 @@ void sampleDataRandom(const DataType* data, unsigned int dataCount, float ratio,
     }
     sampledData = scatterData;
     // std::cout << "[scatterData] (After)\n";
+
+    int maxValue = 0;
+    int minValue = 0;
+    int tmp = 0;
+
+    for(int i = 0; i < numSample; i++)
+    {
+        tmp = scatterData[i].funcValue;
+        if(maxValue < tmp)
+        {
+            maxValue = tmp;
+        }
+        if(minValue > tmp)
+        {
+            minValue = tmp;
+        }
+    }
+
+    return { minValue, maxValue };
 }
 
 

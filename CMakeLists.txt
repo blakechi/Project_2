@@ -9,6 +9,7 @@ add_executable(project
     "main.cpp"
     "src/Color.hpp"
     "src/Color.cpp"
+    "src/ColorMap.hpp"
     "src/DataSource.hpp"
     "src/ScatterPoint.hpp"
     "src/Interpolation.hpp"

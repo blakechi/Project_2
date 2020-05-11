@@ -185,18 +185,18 @@ ScatterPoint<float> localShepard2(const Tree* kDTree, const DataSource<ScatterPo
         kNearestNeighbors.resize(numResults);
         neighborsDistance.resize(numResults);
         
-        std::cout << "Original Idx: " << utils::convertIdx1DTo3D(originalIdx, sampleData.dimension) << std::endl;
-        for(size_t neighbor : kNearestNeighbors)
-        {
-            std::cout << utils::convertIdx1DTo3D(sampleData.data[neighbor].index, sampleData.dimension) << ", ";
-        }
-        std::cout << std::endl;
+        // std::cout << "Original Idx: " << utils::convertIdx1DTo3D(originalIdx, sampleData.dimension) << std::endl;
+        // for(size_t neighbor : kNearestNeighbors)
+        // {
+        //     std::cout << utils::convertIdx1DTo3D(sampleData.data[neighbor].index, sampleData.dimension) << ", ";
+        // }
+        // std::cout << std::endl;
 
-        for(float distance : neighborsDistance)
-        {
-            std::cout << distance << " ";
-        }
-        std::cout << std::endl;
+        // for(float distance : neighborsDistance)
+        // {
+        //     std::cout << distance << " ";
+        // }
+        // std::cout << std::endl;
 
         float numerator = 0;
         float denominator = 0;
@@ -284,7 +284,7 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
     }
     else
     {
-        float R = 0.00001;
+        float R = 0.001;
         Eigen::MatrixXd M;
         Eigen::VectorXd C;
         Eigen::VectorXd F;
@@ -395,15 +395,18 @@ ScatterPoint<float> globalHardy(Tree* kDTree, const Eigen::VectorXd& C, const Da
     }
     else
     {
-        int R = 10;
+        float R = 0.001;
         float distance;
         float interpolatedValue = 0;
         for(int i = 0; i < sampleData.count; i++)
         {
-            distance = (target - utils::convertIdx1DTo3D(
-                sampleData.data[i].index,
-                sampleData.dimension
-            )).magnitude();
+            distance = (
+                target/32 - 
+                utils::convertIdx1DTo3D(
+                    sampleData.data[i].index,
+                    sampleData.dimension
+                )/32
+            ).squareMagnitude();
 
             if(INVERSE)
             {
@@ -445,16 +448,20 @@ const Eigen::MatrixXd precomputeGlobalC(const DataSource<ScatterPoint<float>>& s
 
         for(int j = 0; j < sampleData.count; j++)
         {
-            distance = (rowNeighbor - utils::convertIdx1DTo3D(
-                sampleData.data[j].index,
-                sampleData.dimension
-            )).magnitude();
+            distance = (
+                rowNeighbor/32 -
+                utils::convertIdx1DTo3D(
+                    sampleData.data[j].index,
+                    sampleData.dimension
+                )/32
+            ).squareMagnitude();
 
             M(i, j) = std::sqrtf(R*R + distance);
         }
     }
 
-    C = M.householderQr().solve(F);
+    Eigen::MatrixXd pseudoInv = (M.transpose()*M).completeOrthogonalDecomposition().pseudoInverse();
+    C = pseudoInv*M.transpose()*F;
 
     return C;
 }

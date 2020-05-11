@@ -10,6 +10,7 @@
 #include "Timer.hpp"
 #include "ScatterPoint.hpp"
 #include "DataSource.hpp"
+#include "ColorMap.hpp"
 
 
 typedef nanoflann::KDTreeSingleIndexAdaptor
@@ -85,7 +86,7 @@ int main(int argc, char* argv[])
     data_.dimension[2] = lateral;
 
     ScatterPoint<DataType>* sampleData_;
-    utils::sampleDataRandom<DataType>(data_.data, data_.count, sampleRate, sampleData_);
+    Point2<int> minMaxValue = utils::sampleDataRandom<DataType>(data_.data, data_.count, sampleRate, sampleData_);
 
     DataSource<ScatterPoint<DataType>> data__;
     data__.count = static_cast<int>(data_.count*sampleRate);
@@ -96,6 +97,22 @@ int main(int argc, char* argv[])
 
 
     Image* image_ = new Color[imageDimension.x*imageDimension.y];
+    Color colorDummy(0);
+    Eigen::VectorXd CHardy = Interpolation::precomputeGlobalC(data__, 0.001);
+
+    // original
+    for(int y = imageDimension.y - 1; y >= 0; y--)
+    {
+        for(int x = 0; x < imageDimension.x; x++)
+        {
+            colorDummy = ColorMap::mapColorFrom(data_.data[x + y*imageDimension.x + 16*imageDimension.x*imageDimension.y], minMaxValue);
+            image_[x + y*imageDimension.x] = colorDummy.clamp().convert255();
+        }
+    }
+
+    std::string imageName = "original.ppm";
+    utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);
+
     for(int i = 0; i < imageDimension.x*imageDimension.y; i++)
     {
         image_[i] = Color(0);
@@ -107,11 +124,12 @@ int main(int argc, char* argv[])
         Point p = utils::convertIdx1DTo3D(data__.data[idx].index, data__.dimension);
         if(p.z() == 16)
         {
-            image_[static_cast<int>(p.x() + p.y()*data__.dimension[0])] = Color(data__.data[idx].funcValue).convert255();
+            colorDummy = ColorMap::mapColorFrom(data__.data[idx].funcValue, minMaxValue);
+            image_[static_cast<int>(p.x() + p.y()*data__.dimension[0])] = colorDummy.clamp().convert255();
         }
     }
 
-    std::string imageName = "sampled.ppm";
+    imageName = "sampled.ppm";
     utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);
 
     // interpolated
@@ -119,9 +137,13 @@ int main(int argc, char* argv[])
     {
         for(int x = 0; x < imageDimension.x; x++)
         {
+            // ScatterPoint<DataType> result = Interpolation::localShepard2<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6);
             // ScatterPoint<DataType> result = Interpolation::globalShepard2<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6);
-            ScatterPoint<DataType> result = Interpolation::localHardy<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6, false);
-            image_[x + y*imageDimension.x] = Color(result.funcValue).clamp().gammaCorrection(4).convert255();
+            // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree>(kdTree_, data__, Vector3(x, y, 32), 6, false);
+            ScatterPoint<DataType> result = Interpolation::globalHardy<KDTree>(kdTree_, CHardy, data__, Vector3(x, y, 32), false);
+
+            colorDummy = ColorMap::mapColorFrom(result.funcValue, minMaxValue);
+            image_[x + y*imageDimension.x] = colorDummy.clamp().gammaCorrection(6).convert255();
         }
     }
 
