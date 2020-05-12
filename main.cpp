@@ -13,7 +13,7 @@
 #include "ColorMap.hpp"
 
 
-#define NUMNEIGHBORS 10
+#define NUMNEIGHBORS 6
 
 
 float R = 10.0f;
@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     {
         for(int x = 0; x < imageDimension.x; x++)
         {
-            colorDummy = ColorMap::mapColorFrom(data.data[x + y*imageDimension.x + 16*imageDimension.x*imageDimension.y], minMaxValue);
+            colorDummy = ColorMap::mapColorFrom(data.data[x + y*data.dimension[0] + sliceIdx*data.dimension[0]*data.dimension[1]], minMaxValue);
             image_[x + y*imageDimension.x] = colorDummy.clamp().convert255();
         }
     }
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
         if(p.z() == sliceIdx)
         {
             colorDummy = ColorMap::mapColorFrom(scatterData.data[idx].funcValue, minMaxValue);
-            image[static_cast<int>(p.x() + p.y()*scatterData.dimension[0])] = colorDummy.clamp().convert255();
+            image[static_cast<int>(p.x() + p.y()*imageDimension.x)] = colorDummy.clamp().convert255();
         }
     }
 
@@ -108,8 +108,8 @@ int main(int argc, char* argv[])
     {
         for(int x = 0; x < imageDimension.x; x++)
         {
-            ScatterPoint<DataType> result = Interpolation::localShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), NUMNEIGHBORS);
-            // ScatterPoint<DataType> result = Interpolation::globalShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), NUMNEIGHBORS);
+            // ScatterPoint<DataType> result = Interpolation::localShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), NUMNEIGHBORS);
+            ScatterPoint<DataType> result = Interpolation::globalShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx));
             // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), false, R, NUMNEIGHBORS);
             // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), true, R, NUMNEIGHBORS);
             // ScatterPoint<DataType> result = Interpolation::approximateGlobalHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), false, R);
@@ -140,9 +140,11 @@ int main(int argc, char* argv[])
     }       
 
     imageName = "interpolated.ppm";
-    utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);
+    utils::generateImage(imageName, image, imageDimension.x, imageDimension.y);
+
 
     std::cout << "Averge Pixel Error: " << utils::calculateAveragePixelErrorBetween(image, image_, imageDimension.x*imageDimension.y) << '\n';
+
 
     delete[] image;
     delete[] scatterData.data;

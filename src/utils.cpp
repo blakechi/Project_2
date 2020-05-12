@@ -102,7 +102,7 @@ DataSource<float> loadRawData(const char* volumePath)
     float* data_ptr = new float[data_count];
     for(int i = 0; i < data_count; i++)
     {
-        data_ptr[i] = static_cast<float>(data_ptr_char[i]) + 128;
+        data_ptr[i] = (static_cast<float>(data_ptr_char[i]) + 128)/255;
     }
     delete[] data_ptr_char;
 

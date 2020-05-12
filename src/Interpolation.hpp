@@ -152,8 +152,8 @@ float triCubic3D(const T* funcValue, const Point& p)
 // Shepard
 //
 //
-template<typename Tree>
-ScatterPoint<float> localShepard2(const Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors)
+template<typename Tree, typename DataType>
+ScatterPoint<DataType> localShepard2(const Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors)
 {
     // std::cout << "[interpolateData]\n";
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
@@ -215,8 +215,8 @@ ScatterPoint<float> localShepard2(const Tree* kDTree, const DataSource<ScatterPo
 }
 
 
-template<typename Tree>
-ScatterPoint<float> globalShepard2(const Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const int numNeighbors)
+template<typename Tree, typename DataType>
+ScatterPoint<DataType> globalShepard2(const Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target)
 {
     // std::cout << "[interpolateData]\n";
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
@@ -260,8 +260,8 @@ ScatterPoint<float> globalShepard2(const Tree* kDTree, const DataSource<ScatterP
 // Hardy
 //
 //
-template<typename Tree>
-ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE, const int numNeighbors)
+template<typename Tree, typename DataType>
+ScatterPoint<DataType> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE, const float R, const int numNeighbors)
 {
     // std::cout << "[interpolateData]\n";
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
@@ -280,11 +280,11 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
 
     if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
     {
+        std::cout << "func value: " << sampleData.data[kNearestNeighbors[0]].funcValue << '\n';
         return {originalIdx, sampleData.data[kNearestNeighbors[0]].funcValue};
     }
     else
     {
-        float R = 0.001;
         Eigen::MatrixXd M;
         Eigen::VectorXd C;
         Eigen::VectorXd F;
@@ -310,7 +310,7 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
             Point rowNeighbor = utils::convertIdx1DTo3D(
                 sampleData.data[kNearestNeighbors[i]].index,
                 sampleData.dimension
-            )/32;
+            );
 
             for(int j = 0; j < numResults; j++)
             {
@@ -325,7 +325,7 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
                         utils::convertIdx1DTo3D(
                             sampleData.data[kNearestNeighbors[j]].index,
                             sampleData.dimension
-                        )/32    // normalize
+                        )    // normalize
                     ).squareMagnitude();
 
                     M(i, j) = std::sqrt(R*R + distance);
@@ -347,11 +347,11 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
         {
             distance = (
                 // normalize
-                target/32 - 
+                target - 
                 utils::convertIdx1DTo3D(
                     sampleData.data[kNearestNeighbors[i]].index,
                     sampleData.dimension
-                )/32
+                )
             ).squareMagnitude();
 
             if(INVERSE)
@@ -364,6 +364,7 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
             }
         }
 
+        std::cout << "interpolate:" << interpolatedValue << "\n";
         return { 
             originalIdx,
             interpolatedValue
@@ -372,8 +373,8 @@ ScatterPoint<float> localHardy(Tree* kDTree, const DataSource<ScatterPoint<float
 }
 
 
-template<typename Tree>
-ScatterPoint<float> approximateGlobalHardy(Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE, const int numNeighbors = 1000)
+template<typename Tree, typename DataType>
+ScatterPoint<DataType> approximateGlobalHardy(Tree* kDTree, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE, const float R, const int numNeighbors = 128)
 {
     // std::cout << "[interpolateData]\n";
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
@@ -396,7 +397,6 @@ ScatterPoint<float> approximateGlobalHardy(Tree* kDTree, const DataSource<Scatte
     }
     else
     {
-        float R = 0.001;
         Eigen::MatrixXd M;
         Eigen::VectorXd C;
         Eigen::VectorXd F;
@@ -484,8 +484,8 @@ ScatterPoint<float> approximateGlobalHardy(Tree* kDTree, const DataSource<Scatte
 }
 
 
-template<typename Tree>
-ScatterPoint<float> globalHardy(Tree* kDTree, const Eigen::VectorXd& C, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE)
+template<typename Tree, typename DataType>
+ScatterPoint<DataType> globalHardy(Tree* kDTree, const Eigen::VectorXd& C, const DataSource<ScatterPoint<float>>& sampleData, const Point& target, const bool INVERSE, const float R)
 {
     // use precomputeGlobalC first to get C as the second argument
     int originalIdx = utils::convertIdx3DTo1D(target, sampleData.dimension);
@@ -508,7 +508,6 @@ ScatterPoint<float> globalHardy(Tree* kDTree, const Eigen::VectorXd& C, const Da
     }
     else
     {
-        float R = 0.001;
         float distance;
         float interpolatedValue = 0;
         for(int i = 0; i < sampleData.count; i++)
@@ -540,7 +539,8 @@ ScatterPoint<float> globalHardy(Tree* kDTree, const Eigen::VectorXd& C, const Da
 }
 
 
-const Eigen::MatrixXd precomputeGlobalC(const DataSource<ScatterPoint<float>>& sampleData, const float R)
+template<typename DataType>
+const Eigen::MatrixXd precomputeGlobalC(const DataSource<ScatterPoint<DataType>>& sampleData, const float R)
 {
     Eigen::MatrixXd M;
     Eigen::VectorXd C;
