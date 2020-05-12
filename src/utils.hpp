@@ -32,6 +32,14 @@ bool isInsideSphere(const Point& center, float radius, const Point& p);
 void generateSphereTestData(unsigned int lateral, float*& data);
 const Point convertIdx1DTo3D(int idx, const int* dimension);
 int convertIdx3DTo1D(const Point& p, const int* dimension);
+float calculateAveragePixelErrorBetween(const Image* image1, const Image* image2, const int& numPixels);
+
+
+inline bool cmdOptionExists(char** begin, char** end, const std::string& option)
+{
+	//https://stackoverflow.com/a/868894/1608232
+	return std::find(begin, end, option) != end;
+}
 
 
 template<typename DataType>

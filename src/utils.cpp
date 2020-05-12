@@ -7,6 +7,7 @@
 
 
 #include "utils.hpp"
+#include "Timer.hpp"
 
 
 #define BLANK -999
@@ -45,20 +46,23 @@ int getInt(const char* argv)
 
 void generateImage(std::string &fileName, Image* image, int width, int height)
 {
-    std::ofstream output(fileName, std::ios::binary);
-
-    output << "P3\n" << width << " " << height << "\n255\n";
-
-    for(int g = height - 1; g >= 0; g--)
+    Timer timer(fileName);
     {
-        for(int h = 0; h < width; h++)
-        {
-            output << image[g*width + h] << "\n";
-        }
-    }
+        std::ofstream output(fileName, std::ios::binary);
 
-    output.clear();
-    output.close();
+        output << "P3\n" << width << " " << height << "\n255\n";
+
+        for(int g = height - 1; g >= 0; g--)
+        {
+            for(int h = 0; h < width; h++)
+            {
+                output << image[g*width + h] << "\n";
+            }
+        }
+
+        output.clear();
+        output.close();
+    }
 }
 
 
@@ -182,6 +186,18 @@ const Point convertIdx1DTo3D(int idx, const int* dimension)
 int convertIdx3DTo1D(const Point& p, const int* dimension)
 {
     return p.x() + p.y()*dimension[0] + p.z()*dimension[0]*dimension[1];
+}
+
+
+float calculateAveragePixelErrorBetween(const Image* image1, const Image* image2, const int& numPixels)
+{
+    float error = 0;
+    for(int i = 0; i < numPixels; i++)
+    {
+        error += (image1[i] - image2[i]).magnitude();
+    }
+
+    return error/(numPixels*255);
 }
 
 

@@ -9,6 +9,7 @@ private:
 
 public:
     Timer();
+    Timer(const std::string& message);
     ~Timer();
 
     void stop();

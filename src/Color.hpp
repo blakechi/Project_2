@@ -42,6 +42,8 @@ public:
     void set(const float &r, const float &g, const float &b);
     void set(const float &f);
     Color clamp();
+    float squareMagnitude();
+    float magnitude();
     Color convert255() const;
     Color gammaCorrection(float gamma) const;
     Color gammaCorrection2() const;

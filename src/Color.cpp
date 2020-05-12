@@ -204,6 +204,16 @@ Color Color::clamp()
     return { r, g, b };
 }
 
+float Color::squareMagnitude()
+{
+    return _data[0]*_data[0] + _data[1]*_data[1] + _data[2]*_data[2];
+}
+
+float Color::magnitude()
+{
+    return std::sqrt(squareMagnitude());
+}
+
 Color Color::convert255() const
 {
     return Color(int(255.99*_data[0]), int(255.99*_data[1]), int(255.99*_data[2]));
