@@ -7,7 +7,6 @@
 
 
 #include "utils.hpp"
-#include "Timer.hpp"
 
 
 #define BLANK -999
@@ -46,23 +45,20 @@ int getInt(const char* argv)
 
 void generateImage(std::string &fileName, Image* image, int width, int height)
 {
-    Timer timer(fileName);
+    std::ofstream output(fileName, std::ios::binary);
+
+    output << "P3\n" << width << " " << height << "\n255\n";
+
+    for(int g = height - 1; g >= 0; g--)
     {
-        std::ofstream output(fileName, std::ios::binary);
-
-        output << "P3\n" << width << " " << height << "\n255\n";
-
-        for(int g = height - 1; g >= 0; g--)
+        for(int h = 0; h < width; h++)
         {
-            for(int h = 0; h < width; h++)
-            {
-                output << image[g*width + h] << "\n";
-            }
+            output << image[g*width + h] << "\n";
         }
-
-        output.clear();
-        output.close();
     }
+
+    output.clear();
+    output.close();
 }
 
 

@@ -74,6 +74,7 @@ int main(int argc, char* argv[])
 
 
     // original
+    std::string imageName = "original.ppm";
     for(int y = imageDimension.y - 1; y >= 0; y--)
     {
         for(int x = 0; x < imageDimension.x; x++)
@@ -82,12 +83,11 @@ int main(int argc, char* argv[])
             image_[x + y*imageDimension.x] = colorDummy.clamp().convert255();
         }
     }
-
-    std::string imageName = "original.ppm";
     utils::generateImage(imageName, image_, imageDimension.x, imageDimension.y);
 
 
     // random sampled
+    imageName = "sampled.ppm";
     for(int idx = 0; idx < scatterData.count; idx++)
     {
         Point p = utils::convertIdx1DTo3D(scatterData.data[idx].index, scatterData.dimension);
@@ -97,35 +97,42 @@ int main(int argc, char* argv[])
             image[static_cast<int>(p.x() + p.y()*imageDimension.x)] = colorDummy.clamp().convert255();
         }
     }
-
-    imageName = "sampled.ppm";
     utils::generateImage(imageName, image, imageDimension.x, imageDimension.y);
 
 
     // interpolated
-    float tmp = 0.0f;
-    for(int y = imageDimension.y - 1; y >= 0; y--)
+    imageName = "interpolated.ppm";
+    Timer timer(imageName);
     {
-        for(int x = 0; x < imageDimension.x; x++)
+        float tmp = 0.0f;
+        for(int y = imageDimension.y - 1; y >= 0; y--)
         {
-            // ScatterPoint<DataType> result = Interpolation::localShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), NUMNEIGHBORS);
-            ScatterPoint<DataType> result = Interpolation::globalShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx));
-            // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), false, R, NUMNEIGHBORS);
-            // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), true, R, NUMNEIGHBORS);
-            // ScatterPoint<DataType> result = Interpolation::approximateGlobalHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), false, R);
-            // ScatterPoint<DataType> result = Interpolation::approximateGlobalHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), true, R);
-            // ScatterPoint<DataType> result = Interpolation::globalHardy<KDTree>(kdTree, CHardy, scatterData, Vector3(x, y, sliceIdx), false, R);
-            // ScatterPoint<DataType> result = Interpolation::globalHardy<KDTree>(kdTree, CHardy, scatterData, Vector3(x, y, sliceIdx), true, R);
-            image[x + y*imageDimension.x] = Color(result.funcValue).clamp();
+            for(int x = 0; x < imageDimension.x; x++)
+            {
+                // ScatterPoint<DataType> result = Interpolation::localShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), NUMNEIGHBORS);
+                ScatterPoint<DataType> result = Interpolation::globalShepard2<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx));
+                // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), false, R, NUMNEIGHBORS);
+                // ScatterPoint<DataType> result = Interpolation::localHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), true, R, NUMNEIGHBORS);
+                // ScatterPoint<DataType> result = Interpolation::approximateGlobalHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), false, R);
+                // ScatterPoint<DataType> result = Interpolation::approximateGlobalHardy<KDTree, DataType>(kdTree, scatterData, Vector3(x, y, sliceIdx), true, R);
+                // ScatterPoint<DataType> result = Interpolation::globalHardy<KDTree>(kdTree, CHardy, scatterData, Vector3(x, y, sliceIdx), false, R);
+                // ScatterPoint<DataType> result = Interpolation::globalHardy<KDTree>(kdTree, CHardy, scatterData, Vector3(x, y, sliceIdx), true, R);
+                image[x + y*imageDimension.x] = Color(result.funcValue).clamp();
 
-            tmp = result.funcValue;
-            if(minMaxValue.max < tmp)
-            {
-                minMaxValue.max = tmp;
-            }
-            if(minMaxValue.min > tmp)
-            {
-                minMaxValue.min = tmp;
+                tmp = result.funcValue;
+                if(minMaxValue.max < tmp)
+                {
+                    minMaxValue.max = tmp;
+                }
+                if(minMaxValue.min > tmp)
+                {
+                    minMaxValue.min = tmp;
+                }
+
+                if(x == 0 && y % 16 == 0)
+                {
+                    std::cout << y << '\n';
+                }
             }
         }
     }
@@ -138,8 +145,6 @@ int main(int argc, char* argv[])
             image[x + y*imageDimension.x] = colorDummy.clamp().convert255();        
         }
     }       
-
-    imageName = "interpolated.ppm";
     utils::generateImage(imageName, image, imageDimension.x, imageDimension.y);
 
 

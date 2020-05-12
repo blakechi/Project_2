@@ -280,7 +280,7 @@ ScatterPoint<DataType> localHardy(Tree* kDTree, const DataSource<ScatterPoint<fl
 
     if(numResults == 1 && sampleData.data[kNearestNeighbors[0]].index == originalIdx)
     {
-        std::cout << "func value: " << sampleData.data[kNearestNeighbors[0]].funcValue << '\n';
+        // std::cout << "func value: " << sampleData.data[kNearestNeighbors[0]].funcValue << '\n';
         return {originalIdx, sampleData.data[kNearestNeighbors[0]].funcValue};
     }
     else
@@ -364,7 +364,7 @@ ScatterPoint<DataType> localHardy(Tree* kDTree, const DataSource<ScatterPoint<fl
             }
         }
 
-        std::cout << "interpolate:" << interpolatedValue << "\n";
+        // std::cout << "interpolate:" << interpolatedValue << "\n";
         return { 
             originalIdx,
             interpolatedValue
